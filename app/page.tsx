@@ -1,6 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
 
 interface StockData {
   "Global Quote"?: {
@@ -37,6 +45,25 @@ export default function Home() {
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [analysisError, setAnalysisError] = useState("");
+  const [chartData, setChartData] = useState<{ date: string; price: number }[]>([]);
+  useEffect(() => {
+  if (!stockData) {
+    setChartData([]);
+    return;
+  }
+  const fetchHistory = async () => {
+    try {
+      const response = await fetch(`/api/history?ticker=${ticker}`);
+      const data = await response.json();
+      if (Array.isArray(data)) {
+        setChartData(data);
+      }
+    } catch (err) {
+      setChartData([]);
+    }
+  };
+  fetchHistory();
+}, [stockData]);
 
   const handleSearch = async () => {
     if (!ticker) return;
@@ -183,6 +210,46 @@ export default function Home() {
                       <p className="font-medium text-zinc-900 dark:text-white">${quote["04. low"]}</p>
                     </div>
                   </div>
+                  {chartData.length > 0 && (
+  <div className="px-6 pb-6">
+    <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+      30-Day Price History
+    </p>
+    <ResponsiveContainer width="100%" height={200}>
+      <LineChart data={chartData}>
+        <XAxis
+          dataKey="date"
+          tick={{ fontSize: 11 }}
+          tickFormatter={(date) => date.slice(5)}
+          stroke="currentColor"
+          className="text-zinc-400"
+        />
+        <YAxis
+          domain={["auto", "auto"]}
+          tick={{ fontSize: 11 }}
+          stroke="currentColor"
+          className="text-zinc-400"
+        />
+        <Tooltip
+          contentStyle={{
+            backgroundColor: "var(--background)",
+            border: "1px solid #71717a",
+            borderRadius: "8px",
+            fontSize: "12px",
+          }}
+        />
+        <Line
+          type="monotone"
+          dataKey="price"
+          stroke={isPositive ? "#059669" : "#dc2626"}
+          strokeWidth={2}
+          dot={false}
+        />
+      </LineChart>
+    </ResponsiveContainer>
+  </div>
+)}
+            
 
                   <div className="border-t border-zinc-100 px-6 py-4 dark:border-zinc-800">
                     <button
