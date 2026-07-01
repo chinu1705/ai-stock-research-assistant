@@ -180,17 +180,31 @@ export default function Home() {
 
               {activeTab === "overview" && (
                 <div className="mt-4 overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-                  <div className={`px-6 py-5 ${isPositive ? "bg-emerald-600" : "bg-red-600"}`}>
-                    <div className="flex items-baseline justify-between">
-                      <h2 className="text-2xl font-bold text-white">{quote["01. symbol"]}</h2>
-                      <div className="text-right">
-                        <p className="text-2xl font-bold text-white">${quote["05. price"]}</p>
-                        <p className="text-sm font-medium text-white/90">
-                          {quote["09. change"]} ({quote["10. change percent"]})
-                        </p>
-                      </div>
-                    </div>
-                  </div>
+                 <div className={`px-6 py-5 ${isPositive ? "bg-emerald-600" : "bg-red-600"}`}>
+  <div className="flex items-center justify-between">
+    <div className="flex items-center gap-3">
+      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/20 shadow-md backdrop-blur-sm">
+  <span className="text-xs font-black text-white">
+    {quote["01. symbol"].slice(0, 4)}
+  </span>
+</div>
+      <div>
+        <h2 className="text-2xl font-bold text-white">
+          {quote["01. symbol"]}
+        </h2>
+        <p className="text-sm text-white/80">
+          {isPositive ? "▲ Trending Up" : "▼ Trending Down"}
+        </p>
+      </div>
+    </div>
+    <div className="text-right">
+      <p className="text-2xl font-bold text-white">${quote["05. price"]}</p>
+      <p className="text-sm font-medium text-white/90">
+        {quote["09. change"]} ({quote["10. change percent"]})
+      </p>
+    </div>
+  </div>
+</div>
 
                   <div className="grid grid-cols-2 gap-4 p-6 text-sm sm:grid-cols-4">
                     <div>
