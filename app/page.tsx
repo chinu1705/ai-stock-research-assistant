@@ -112,6 +112,8 @@ export default function Home() {
   const [chartData, setChartData] = useState<{ date: string; price: number }[]>([]);
   const [peers, setPeers] = useState<Peer[]>([]);
   const [priceFlash, setPriceFlash] = useState(false);
+  const [listening, setListening] = useState(false);
+
 
  useEffect(() => {
   if (!stockData) {
@@ -180,7 +182,47 @@ export default function Home() {
       setLoading(false);
     }
   };
+const handleVoiceSearch = () => {
+  if (!("webkitSpeechRecognition" in window) && !("SpeechRecognition" in window)) {
+    alert("Voice search is not supported in this browser. Try Chrome.");
+    return;
+  }
 
+  const SpeechRecognition =
+    (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+  const recognition = new SpeechRecognition();
+  recognition.lang = "en-US";
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 1;
+
+  recognition.onstart = () => setListening(true);
+  recognition.onend = () => setListening(false);
+
+  recognition.onresult = async (event: any) => {
+    const spoken = event.results[0][0].transcript;
+    try {
+      const response = await fetch("/api/ticker", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ companyName: spoken }),
+      });
+      const data = await response.json();
+      if (data.ticker) {
+        setTicker(data.ticker);
+        setTimeout(() => handleSearch(), 300);
+      }
+    } catch {
+      alert("Could not convert speech to ticker. Please try again.");
+    }
+  };
+
+  recognition.onerror = () => {
+    setListening(false);
+    alert("Voice recognition error. Please try again.");
+  };
+
+  recognition.start();
+};
   const handleAnalyze = async () => {
     const quote = stockData?.["Global Quote"];
     if (!quote) return;
@@ -234,23 +276,35 @@ export default function Home() {
             </button>
           </div>
 
-          <div className="flex w-full gap-2">
-            <input
-              type="text"
-              value={ticker}
-              onChange={(e) => setTicker(e.target.value.toUpperCase())}
-              onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-              placeholder="e.g. AAPL, TSLA, RELIANCE.NS"
-              className="flex-1 rounded-lg border border-zinc-300 bg-white px-4 py-3 text-zinc-900 outline-none focus:border-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white dark:focus:border-white"
-            />
-            <button
-              onClick={handleSearch}
-              disabled={loading}
-              className="rounded-lg bg-zinc-900 px-6 py-3 font-medium text-white hover:bg-zinc-700 disabled:opacity-50 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
-            >
-              {loading ? "Loading..." : "Search"}
-            </button>
-          </div>
+<div className="flex w-full gap-2">
+  <input
+    type="text"
+    value={ticker}
+    onChange={(e) => setTicker(e.target.value.toUpperCase())}
+    onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+    placeholder="e.g. AAPL, TSLA, RELIANCE.NS"
+    className="flex-1 rounded-lg border border-zinc-300 bg-white px-4 py-3 text-zinc-900 outline-none focus:border-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white dark:focus:border-white"
+  />
+  <button
+    onClick={handleVoiceSearch}
+    disabled={listening}
+    className={`rounded-lg border px-4 py-3 transition ${
+      listening
+        ? "border-red-500 bg-red-50 text-red-500 dark:bg-red-950"
+        : "border-zinc-300 bg-white text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400"
+    }`}
+    title="Voice search"
+  >
+    {listening ? "🔴" : "🎙️"}
+  </button>
+  <button
+    onClick={handleSearch}
+    disabled={loading}
+    className="rounded-lg bg-zinc-900 px-6 py-3 font-medium text-white hover:bg-zinc-700 disabled:opacity-50 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
+  >
+    {loading ? "Loading..." : "Search"}
+  </button>
+</div>
 
           {error && (
             <p className="mt-6 text-center text-red-600 dark:text-red-400">{error}</p>
