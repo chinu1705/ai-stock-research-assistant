@@ -3,7 +3,7 @@ import { GoogleGenAI } from "@google/genai";
 
 export async function POST(request: NextRequest) {
   const body = await request.json();
-  const { ticker, quote } = body;
+  const { ticker, quote, currency } = body;
 
   if (!ticker || !quote) {
     return NextResponse.json(
@@ -15,25 +15,27 @@ export async function POST(request: NextRequest) {
   const apiKey = process.env.GEMINI_API_KEY;
   const ai = new GoogleGenAI({ apiKey });
 
-const prompt = `You are a senior equity research analyst at a top investment bank. Based on this stock data for ${ticker}:
-- Current price: $${quote["05. price"]}
-- Open: $${quote["02. open"]}
-- High: $${quote["03. high"]}
-- Low: $${quote["04. low"]}
-- Previous close: $${quote["08. previous close"]}
+  const prompt = `You are a senior equity analyst at Goldman Sachs. Analyze this stock data for ${ticker}:
+- Price: ${currency}${quote["05. price"]}
 - Change: ${quote["09. change"]} (${quote["10. change percent"]})
+- Open: ${currency}${quote["02. open"]}
+- High: ${currency}${quote["03. high"]}
+- Low: ${currency}${quote["04. low"]}
+- Prev Close: ${currency}${quote["08. previous close"]}
 
-Provide a professional research summary with:
-1. SUMMARY: A sharp, insightful 3-sentence overview of the price action and what it signals to institutional investors.
-2. BULL CASE: The 3 strongest arguments for why this stock could outperform. Be specific about catalysts, momentum, and market dynamics.
-3. BEAR CASE: The 3 strongest arguments for downside risk. Cover valuation concerns, macro headwinds, and technical signals.
-4. CONFIDENCE SCORE: A number from 0-100 representing overall bullish sentiment (0=extremely bearish, 50=neutral, 100=extremely bullish). Base this on price momentum, trend strength, and risk/reward.
-5. SENTIMENT: exactly one word, either "Bearish", "Neutral", or "Bullish".
-6. KEY CATALYST: One specific near-term event or factor that could move this stock significantly.
-7. RISK LEVEL: exactly one word, either "Low", "Medium", or "High".
-
-Respond ONLY in this exact JSON format, no markdown, no extra text:
-{"summary": "...", "bullCase": "...", "bearCase": "...", "confidenceScore": 75, "sentiment": "Bullish", "keyCatalyst": "...", "riskLevel": "Medium"}`;
+Return ONLY this exact JSON, no markdown, no extra text:
+{
+  "confidenceScore": <number 0-100>,
+  "sentiment": <"Bullish" or "Neutral" or "Bearish">,
+  "riskLevel": <"Low" or "Medium" or "High">,
+  "summary": "<2 sentences max. Sharp, specific, no filler words>",
+  "keyCatalyst": "<1 specific near-term catalyst. Max 15 words.>",
+  "bullCase": "<3 specific bullet points separated by |. Each max 12 words. No generic statements.>",
+  "bearCase": "<3 specific bullet points separated by |. Each max 12 words. No generic statements.>",
+  "technicalSignal": <"Strong Buy" or "Buy" or "Hold" or "Sell" or "Strong Sell">,
+  "priceTarget": "<a specific short-term price target with rationale in 10 words max>",
+  "volatilityNote": "<one sharp observation about today's price range in 10 words max>"
+}`;
 
   try {
     const response = await ai.models.generateContent({

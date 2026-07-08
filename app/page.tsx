@@ -33,6 +33,9 @@ interface Analysis {
   sentiment: string;
   keyCatalyst: string;
   riskLevel: string;
+  technicalSignal: string;
+  priceTarget: string;
+  volatilityNote: string;
 }
 
 type Tab = "overview" | "ai" | "history";
@@ -152,7 +155,7 @@ export default function Home() {
       const response = await fetch("/api/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ticker, quote }),
+        body: JSON.stringify({ ticker, quote, currency }),
       });
       const data = await response.json();
       if (data.error) {
@@ -170,11 +173,14 @@ export default function Home() {
 
   const quote = stockData?.["Global Quote"];
   const isPositive = quote ? !quote["09. change"].startsWith("-") : true;
+  const isIndian = ticker.endsWith(".NS") || ticker.endsWith(".BO");
+  const currency = isIndian ? "₹" : "$";
 
   return (
     <div className={darkMode ? "dark" : ""}>
       <div className="min-h-screen bg-gradient-to-b from-zinc-50 to-zinc-100 px-4 py-12 transition-colors dark:from-zinc-950 dark:to-zinc-900">
         <div className="mx-auto max-w-2xl">
+
           <div className="mb-8 flex items-start justify-between">
             <div>
               <h1 className="mb-1 text-4xl font-bold text-zinc-900 dark:text-white">
@@ -252,7 +258,9 @@ export default function Home() {
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="text-2xl font-bold text-white">${quote["05. price"]}</p>
+                        <p className="text-2xl font-bold text-white">
+                          {currency}{quote["05. price"]}
+                        </p>
                         <p className="text-sm font-medium text-white/90">
                           {quote["09. change"]} ({quote["10. change percent"]})
                         </p>
@@ -263,19 +271,27 @@ export default function Home() {
                   <div className="grid grid-cols-2 gap-4 p-6 text-sm sm:grid-cols-4">
                     <div>
                       <p className="text-zinc-500 dark:text-zinc-400">Open</p>
-                      <p className="font-medium text-zinc-900 dark:text-white">${quote["02. open"]}</p>
+                      <p className="font-medium text-zinc-900 dark:text-white">
+                        {currency}{quote["02. open"]}
+                      </p>
                     </div>
                     <div>
                       <p className="text-zinc-500 dark:text-zinc-400">Prev Close</p>
-                      <p className="font-medium text-zinc-900 dark:text-white">${quote["08. previous close"]}</p>
+                      <p className="font-medium text-zinc-900 dark:text-white">
+                        {currency}{quote["08. previous close"]}
+                      </p>
                     </div>
                     <div>
                       <p className="text-zinc-500 dark:text-zinc-400">High</p>
-                      <p className="font-medium text-zinc-900 dark:text-white">${quote["03. high"]}</p>
+                      <p className="font-medium text-zinc-900 dark:text-white">
+                        {currency}{quote["03. high"]}
+                      </p>
                     </div>
                     <div>
                       <p className="text-zinc-500 dark:text-zinc-400">Low</p>
-                      <p className="font-medium text-zinc-900 dark:text-white">${quote["04. low"]}</p>
+                      <p className="font-medium text-zinc-900 dark:text-white">
+                        {currency}{quote["04. low"]}
+                      </p>
                     </div>
                   </div>
 
@@ -325,85 +341,142 @@ export default function Home() {
                       disabled={analyzing}
                       className="w-full rounded-lg bg-indigo-600 px-6 py-3 font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
                     >
-                      {analyzing ? "Generating AI Analysis..." : "✨ Generate AI Analysis"}
+                      {analyzing ? "Generating AI Analysis..." : "Generate AI Analysis"}
                     </button>
                   </div>
                 </div>
               )}
 
               {activeTab === "ai" && (
-                <div className="mt-4 space-y-4">
-                  {analysisError && (
-                    <p className="text-center text-red-600 dark:text-red-400">{analysisError}</p>
-                  )}
-                  {!analysis && !analysisError && (
-                    <p className="rounded-2xl border border-dashed border-zinc-300 p-8 text-center text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
-                      Click "Generate AI Analysis" on the Overview tab first.
-                    </p>
-                  )}
-                  {analysis && (
-                    <>
-                      <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-                        <div className="mb-4 flex items-center justify-between">
-                          <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-                            AI Confidence Score
-                          </p>
-                          <div className="flex gap-2">
-                            <span className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                              analysis.riskLevel === "Low"
-                                ? "bg-emerald-100 text-emerald-700"
-                                : analysis.riskLevel === "Medium"
-                                ? "bg-amber-100 text-amber-700"
-                                : "bg-red-100 text-red-700"
-                            }`}>
-                              {analysis.riskLevel} Risk
-                            </span>
-                            <span className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                              analysis.sentiment === "Bullish"
-                                ? "bg-emerald-100 text-emerald-700"
-                                : analysis.sentiment === "Bearish"
-                                ? "bg-red-100 text-red-700"
-                                : "bg-zinc-100 text-zinc-700"
-                            }`}>
-                              {analysis.sentiment}
-                            </span>
-                          </div>
-                        </div>
-                        <ConfidenceGauge score={analysis.confidenceScore} />
-                      </div>
+  <div className="mt-4 space-y-4">
+    {analysisError && (
+      <p className="text-center text-red-600 dark:text-red-400">{analysisError}</p>
+    )}
+    {!analysis && !analysisError && (
+      <div className="rounded-2xl border border-dashed border-zinc-300 p-8 text-center text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
+        Click Generate AI Analysis on the Overview tab first.
+      </div>
+    )}
+    {analysis && (
+      <>
+        <div className="grid grid-cols-3 gap-3">
+          <div className="rounded-2xl border border-zinc-200 bg-white p-4 text-center shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+            <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-zinc-400">Signal</p>
+            <p className={`text-sm font-black ${
+              analysis.technicalSignal.includes("Buy")
+                ? "text-emerald-600"
+                : analysis.technicalSignal.includes("Sell")
+                ? "text-red-600"
+                : "text-amber-600"
+            }`}>
+              {analysis.technicalSignal}
+            </p>
+          </div>
+          <div className="rounded-2xl border border-zinc-200 bg-white p-4 text-center shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+            <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-zinc-400">Sentiment</p>
+            <p className={`text-sm font-black ${
+              analysis.sentiment === "Bullish"
+                ? "text-emerald-600"
+                : analysis.sentiment === "Bearish"
+                ? "text-red-600"
+                : "text-amber-600"
+            }`}>
+              {analysis.sentiment}
+            </p>
+          </div>
+          <div className="rounded-2xl border border-zinc-200 bg-white p-4 text-center shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+            <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-zinc-400">Risk</p>
+            <p className={`text-sm font-black ${
+              analysis.riskLevel === "Low"
+                ? "text-emerald-600"
+                : analysis.riskLevel === "High"
+                ? "text-red-600"
+                : "text-amber-600"
+            }`}>
+              {analysis.riskLevel}
+            </p>
+          </div>
+        </div>
 
-                      <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-                        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-                          📋 Summary
-                        </p>
-                        <p className="text-zinc-800 dark:text-zinc-200">{analysis.summary}</p>
-                      </div>
+        <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-zinc-400">
+            AI Confidence Score
+          </p>
+          <ConfidenceGauge score={analysis.confidenceScore} />
+        </div>
 
-                      <div className="rounded-2xl border border-indigo-200 bg-indigo-50 p-6 dark:border-indigo-900 dark:bg-indigo-950/40">
-                        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-indigo-700 dark:text-indigo-400">
-                          ⚡ Key Catalyst to Watch
-                        </p>
-                        <p className="text-indigo-900 dark:text-indigo-200">{analysis.keyCatalyst}</p>
-                      </div>
+        <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-400">
+            Analyst View
+          </p>
+          <p className="text-sm leading-relaxed text-zinc-700 dark:text-zinc-300">
+            {analysis.summary}
+          </p>
+        </div>
 
-                      <div className="grid gap-4 sm:grid-cols-2">
-                        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-6 dark:border-emerald-900 dark:bg-emerald-950/40">
-                          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-400">
-                            🐂 Bull Case
-                          </p>
-                          <p className="text-emerald-900 dark:text-emerald-200">{analysis.bullCase}</p>
-                        </div>
-                        <div className="rounded-2xl border border-red-200 bg-red-50 p-6 dark:border-red-900 dark:bg-red-950/40">
-                          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-red-700 dark:text-red-400">
-                            🐻 Bear Case
-                          </p>
-                          <p className="text-red-900 dark:text-red-200">{analysis.bearCase}</p>
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
-              )}
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-400">
+              Price Target
+            </p>
+            <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">
+              {analysis.priceTarget}
+            </p>
+          </div>
+          <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-400">
+              Volatility Note
+            </p>
+            <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">
+              {analysis.volatilityNote}
+            </p>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-indigo-200 bg-indigo-50 p-5 dark:border-indigo-900 dark:bg-indigo-950/40">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-indigo-600 dark:text-indigo-400">
+            Key Catalyst
+          </p>
+          <p className="text-sm font-semibold text-indigo-900 dark:text-indigo-200">
+            {analysis.keyCatalyst}
+          </p>
+        </div>
+
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 dark:border-emerald-900 dark:bg-emerald-950/40">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-400">
+            Bull Case
+          </p>
+          <ul className="space-y-2">
+            {analysis.bullCase.split("|").map((point, i) => (
+              <li key={i} className="flex items-start gap-2 text-sm text-emerald-900 dark:text-emerald-200">
+                <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-xs font-bold text-white">
+                  {i + 1}
+                </span>
+                {point.trim()}
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-5 dark:border-red-900 dark:bg-red-950/40">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-red-700 dark:text-red-400">
+            Bear Case
+          </p>
+          <ul className="space-y-2">
+            {analysis.bearCase.split("|").map((point, i) => (
+              <li key={i} className="flex items-start gap-2 text-sm text-red-900 dark:text-red-200">
+                <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-red-600 text-xs font-bold text-white">
+                  {i + 1}
+                </span>
+                {point.trim()}
+              </li>
+            ))}
+          </ul>
+        </div>
+      </>
+    )}
+  </div>
+)}
 
               {activeTab === "history" && (
                 <div className="mt-4 rounded-2xl border border-dashed border-zinc-300 p-8 text-center text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
