@@ -111,34 +111,51 @@ export default function Home() {
   const [analysisError, setAnalysisError] = useState("");
   const [chartData, setChartData] = useState<{ date: string; price: number }[]>([]);
   const [peers, setPeers] = useState<Peer[]>([]);
+  const [priceFlash, setPriceFlash] = useState(false);
 
-  useEffect(() => {
-    if (!stockData) {
+ useEffect(() => {
+  if (!stockData) {
+    setChartData([]);
+    setPeers([]);
+    return;
+  }
+  const fetchHistory = async () => {
+    try {
+      const response = await fetch(`/api/history?ticker=${ticker}`);
+      const data = await response.json();
+      if (Array.isArray(data)) setChartData(data);
+    } catch {
       setChartData([]);
-      setPeers([]);
-      return;
     }
-    const fetchHistory = async () => {
-      try {
-        const response = await fetch(`/api/history?ticker=${ticker}`);
-        const data = await response.json();
-        if (Array.isArray(data)) setChartData(data);
-      } catch {
-        setChartData([]);
+  };
+  const fetchPeers = async () => {
+    try {
+      const response = await fetch(`/api/peers?ticker=${ticker}`);
+      const data = await response.json();
+      if (data.peers) setPeers(data.peers);
+    } catch {
+      setPeers([]);
+    }
+  };
+  fetchHistory();
+  fetchPeers();
+
+  const interval = setInterval(async () => {
+    try {
+      const response = await fetch(`/api/stock?ticker=${ticker}`);
+      const data = await response.json();
+      if (data["Global Quote"] && Object.keys(data["Global Quote"]).length > 0) {
+        setStockData(data);
+        setPriceFlash(true);
+        setTimeout(() => setPriceFlash(false), 600);
       }
-    };
-    const fetchPeers = async () => {
-      try {
-        const response = await fetch(`/api/peers?ticker=${ticker}`);
-        const data = await response.json();
-        if (data.peers) setPeers(data.peers);
-      } catch {
-        setPeers([]);
-      }
-    };
-    fetchHistory();
-    fetchPeers();
-  }, [stockData]);
+    } catch {
+      // silently fail — don't disrupt the UI on refresh errors
+    }
+  }, 30000);
+
+  return () => clearInterval(interval);
+}, [stockData]);
 
   const handleSearch = async () => {
     if (!ticker) return;
@@ -268,17 +285,23 @@ export default function Home() {
                           </span>
                         </div>
                         <div>
-                          <h2 className="text-2xl font-bold text-white">
-                            {quote["01. symbol"]}
-                          </h2>
+                          <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+  {quote["01. symbol"]}
+  <span className="flex h-2 w-2 relative">
+    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+    <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
+  </span>
+</h2>
                           <p className="text-sm text-white/80">
                             {isPositive ? "▲ Trending Up" : "▼ Trending Down"}
                           </p>
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="text-2xl font-bold text-white">
-                          {currency}{quote["05. price"]}
+                        <p className={`text-2xl font-bold text-white transition-all duration-300 ${
+                                      priceFlash ? "scale-110 opacity-70" : "scale-100 opacity-100"
+                                       }`}>
+                                        {currency}{quote["05. price"]}
                         </p>
                         <p className="text-sm font-medium text-white/90">
                           {quote["09. change"]} ({quote["10. change percent"]})
