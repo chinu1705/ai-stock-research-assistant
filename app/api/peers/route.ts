@@ -1,10 +1,9 @@
-// @ts-nocheck
 import { NextRequest, NextResponse } from "next/server";
 import YahooFinance from "yahoo-finance2";
 
-const yahooFinance = new YahooFinance();
+const yf = new YahooFinance({ suppressNotices: ["yahooSurvey"] } as never);
 
-const PEER_MAP = {
+const PEER_MAP: Record<string, string[]> = {
   AAPL: ["MSFT", "GOOGL", "META"],
   MSFT: ["AAPL", "GOOGL", "AMZN"],
   GOOGL: ["META", "MSFT", "AAPL"],
@@ -27,7 +26,7 @@ const PEER_MAP = {
   "HDFCBANK.BO": ["ICICIBANK.BO", "KOTAKBANK.BO", "SBIN.BO"],
 };
 
-export async function GET(request) {
+export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const ticker = searchParams.get("ticker");
 
@@ -38,29 +37,28 @@ export async function GET(request) {
   const peers = PEER_MAP[ticker.toUpperCase()] || PEER_MAP[ticker] || [];
 
   if (peers.length === 0) {
-    return NextResponse.json({ peers: [] });
+    return NextResponse.json([]);
   }
 
   try {
-    const peerData = await Promise.all(
-      peers.map(async (peer) => {
-        try {
-          const quote = await yahooFinance.quote(peer);
-          return {
-            symbol: peer,
-            price: quote.regularMarketPrice?.toFixed(2) ?? "N/A",
-            change: quote.regularMarketChange?.toFixed(2) ?? "0",
-            changePercent: quote.regularMarketChangePercent?.toFixed(2) ?? "0",
-            isPositive: (quote.regularMarketChange ?? 0) >= 0,
-          };
-        } catch {
-          return null;
-        }
-      })
-    );
+    const peerData: Array<Record<string, unknown> | null> = [];
+    for (const peer of peers) {
+      try {
+        const quote = await yf.quote(peer);
+        peerData.push({
+          symbol: quote.symbol || peer,
+          price: quote.regularMarketPrice || 0,
+          change: quote.regularMarketChange || 0,
+          changePercent: quote.regularMarketChangePercent || 0,
+          isPositive: (quote.regularMarketChange || 0) >= 0,
+        });
+      } catch (e) {
+        console.error(`Failed to fetch peer ${peer}:`, e);
+      }
+    }
 
     const filtered = peerData.filter(Boolean);
-    return NextResponse.json({ peers: filtered });
+    return NextResponse.json(filtered);
   } catch (error) {
     return NextResponse.json({ error: "Failed to fetch peer data" }, { status: 500 });
   }

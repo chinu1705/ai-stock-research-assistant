@@ -1,0 +1,150 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Stock {
+  id              String    @id @default(cuid())
+  ticker          String    @unique
+  name            String
+  sector          String?
+  industry        String?
+  country         String    @default("US")
+  currency        String    @default("USD")
+  marketCap       Float?
+  peRatio         Float?
+  pbRatio         Float?
+  dividendYield   Float?
+  beta            Float?
+  fiftyTwoWeekHigh Float?
+  fiftyTwoWeekLow  Float?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  analyses           Analysis[]
+  memos              InvestmentMemo[]
+  priceData          PriceData[]
+  earningsEvents     EarningsEvent[]
+  opportunityScores  OpportunityScore[]
+}
+
+model Analysis {
+  id              String   @id @default(cuid())
+  stockId         String
+  stock           Stock    @relation(fields: [stockId], references: [id])
+  persona         String
+  signal          String
+  sentiment       String
+  confidenceScore Int
+  riskLevel       String
+  summary         String
+  bullCase        String
+  bearCase        String
+  keyCatalyst     String?
+  priceTarget     Float?
+  volatilityNote  String?
+  technicalSignal String?
+  reasoningChain  String?
+  createdAt       DateTime @default(now())
+
+  @@index([stockId, persona])
+  @@index([createdAt])
+}
+
+model InvestmentMemo {
+  id              String   @id @default(cuid())
+  stockId         String
+  stock           Stock    @relation(fields: [stockId], references: [id])
+  title           String
+  thesis          String
+  valuation       String
+  peerAnalysis    String
+  riskAssessment  String
+  catalysts       String
+  recommendation  String
+  targetPrice     Float?
+  timeHorizon     String
+  confidence      Int
+  personas        String
+  pdfUrl          String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([stockId])
+  @@index([createdAt])
+}
+
+model PriceData {
+  id              String   @id @default(cuid())
+  stockId         String
+  stock           Stock    @relation(fields: [stockId], references: [id])
+  date            DateTime
+  open            Float
+  high            Float
+  low             Float
+  close           Float
+  volume          Int
+  adjClose        Float?
+  sma20           Float?
+  sma50           Float?
+  sma200          Float?
+  rsi14           Float?
+  macd            Float?
+  macdSignal      Float?
+  bollingerUpper  Float?
+  bollingerLower  Float?
+
+  @@unique([stockId, date])
+  @@index([stockId, date])
+}
+
+model EarningsEvent {
+  id               String   @id @default(cuid())
+  stockId          String
+  stock            Stock    @relation(fields: [stockId], references: [id])
+  reportDate       DateTime
+  quarter          String
+  year             Int
+  epsEstimate      Float?
+  epsActual        Float?
+  surprise         Float?
+  revenueEstimate  Float?
+  revenueActual    Float?
+  revenueSurprise  Float?
+  priceMovement    Float?
+  aiReaction       String?
+  createdAt        DateTime @default(now())
+
+  @@index([stockId, reportDate])
+}
+
+model OpportunityScore {
+  id            String   @id @default(cuid())
+  stockId       String
+  stock         Stock    @relation(fields: [stockId], references: [id])
+  date          DateTime @default(now())
+  overallScore  Int
+  valueScore    Int
+  growthScore   Int
+  momentumScore Int
+  qualityScore  Int
+  safetyScore   Int
+  reason        String?
+  period        String
+
+  @@index([date, period])
+  @@index([stockId, date])
+}
+
+model Watchlist {
+  id        String   @id @default(cuid())
+  name      String
+  tickers   String
+  strategy  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

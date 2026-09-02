@@ -30,10 +30,10 @@ Return ONLY this exact JSON, no markdown, no extra text:
   "riskLevel": <"Low" or "Medium" or "High">,
   "summary": "<2 sentences max. Sharp, specific, no filler words>",
   "keyCatalyst": "<1 specific near-term catalyst. Max 15 words.>",
-  "bullCase": "<3 specific bullet points separated by |. Each max 12 words. No generic statements.>",
-  "bearCase": "<3 specific bullet points separated by |. Each max 12 words. No generic statements.>",
+  "bullCase": ["<specific bull point 1, max 12 words>", "<specific bull point 2, max 12 words>", "<specific bull point 3, max 12 words>"],
+  "bearCase": ["<specific bear point 1, max 12 words>", "<specific bear point 2, max 12 words>", "<specific bear point 3, max 12 words>"],
   "technicalSignal": <"Strong Buy" or "Buy" or "Hold" or "Sell" or "Strong Sell">,
-  "priceTarget": "<a specific short-term price target with rationale in 10 words max>",
+  "priceTarget": <number only, no currency symbol, the 12-month price target>,
   "volatilityNote": "<one sharp observation about today's price range in 10 words max>"
 }`;
 
@@ -46,6 +46,17 @@ Return ONLY this exact JSON, no markdown, no extra text:
     const text = response.text ?? "";
     const cleaned = text.replace(/```json|```/g, "").trim();
     const parsed = JSON.parse(cleaned);
+
+    if (typeof parsed.bullCase === "string") {
+      parsed.bullCase = parsed.bullCase.split("|").map((s: string) => s.trim()).filter(Boolean);
+    }
+    if (typeof parsed.bearCase === "string") {
+      parsed.bearCase = parsed.bearCase.split("|").map((s: string) => s.trim()).filter(Boolean);
+    }
+    if (typeof parsed.priceTarget === "string") {
+      const match = parsed.priceTarget.match(/[\d.]+/);
+      parsed.priceTarget = match ? parseFloat(match[0]) : 0;
+    }
 
     return NextResponse.json(parsed);
   } catch (error) {

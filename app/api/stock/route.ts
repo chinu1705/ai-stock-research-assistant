@@ -1,8 +1,7 @@
-// @ts-nocheck
 import { NextRequest, NextResponse } from "next/server";
 import YahooFinance from "yahoo-finance2";
 
-const yahooFinance = new YahooFinance();
+const yf = new YahooFinance({ suppressNotices: ["yahooSurvey"] } as never);
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -13,26 +12,33 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const quote = await yahooFinance.quote(ticker);
-    const result = {
-      "Global Quote": {
-        "01. symbol": quote.symbol ?? ticker,
-        "02. open": quote.regularMarketOpen?.toFixed(2) ?? "0",
-        "03. high": quote.regularMarketDayHigh?.toFixed(2) ?? "0",
-        "04. low": quote.regularMarketDayLow?.toFixed(2) ?? "0",
-        "05. price": quote.regularMarketPrice?.toFixed(2) ?? "0",
-        "06. volume": quote.regularMarketVolume?.toString() ?? "0",
-        "07. latest trading day": new Date().toISOString().split("T")[0],
-        "08. previous close": quote.regularMarketPreviousClose?.toFixed(2) ?? "0",
-        "09. change": quote.regularMarketChange?.toFixed(2) ?? "0",
-        "10. change percent": quote.regularMarketChangePercent?.toFixed(4) + "%",
-      },
-    };
-    return NextResponse.json(result);
+    const quote = await yf.quote(ticker);
+    return NextResponse.json({
+      symbol: quote.symbol || ticker,
+      name: quote.shortName || quote.longName || ticker,
+      price: quote.regularMarketPrice || 0,
+      change: quote.regularMarketChange || 0,
+      changePercent: quote.regularMarketChangePercent || 0,
+      open: quote.regularMarketOpen || 0,
+      high: quote.regularMarketDayHigh || 0,
+      low: quote.regularMarketDayLow || 0,
+      previousClose: quote.regularMarketPreviousClose || 0,
+      volume: quote.regularMarketVolume || 0,
+      marketCap: quote.marketCap || undefined,
+      pe: quote.trailingPE || undefined,
+      pb: quote.priceToBook || undefined,
+      dividendYield: quote.dividendYield || undefined,
+      beta: quote.beta || undefined,
+      fiftyTwoWeekHigh: quote.fiftyTwoWeekHigh || undefined,
+      fiftyTwoWeekLow: quote.fiftyTwoWeekLow || undefined,
+      currency: quote.currency || "USD",
+      exchange: quote.exchange || "",
+    });
   } catch (error) {
+    console.error("Stock API error:", error);
     return NextResponse.json(
-      { error: "Could not find ticker. For Indian stocks try RELIANCE.NS or TCS.BO" },
+      { error: "Could not find ticker", details: String(error) },
       { status: 404 }
     );
   }
-} 
+}
